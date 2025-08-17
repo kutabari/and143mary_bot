@@ -9,7 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiohttp import web
 
-API_TOKEN = 'твой_токен_бота'  # <-- сюда вставь свой токен, который у тебя был
+API_TOKEN = '8335218158:AAGQsXxGCc0qDOolAW1SZesJBmi0l5gE2Ng'  
 
 # Загружаем фразы из файла
 with open("messages.txt", "r", encoding="utf-8") as file:
