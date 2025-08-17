@@ -8,7 +8,7 @@ from aiogram.filters import CommandStart
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from aiohttp import web  # 👈 Добавили
+from aiohttp import web  # 👈 Для фейкового HTTP-сервера
 
 API_TOKEN = '8335218158:AAGQsXxGCc0qDOolAW1SZesJBmi0l5gE2Ng'
 
@@ -22,7 +22,7 @@ dp.message.middleware(CallbackAnswerMiddleware())
 scheduler = AsyncIOScheduler()
 chat_ids = set()
 
-# Сообщения
+# Сообщения для авторассылки (оставляем как есть)
 auto_messages = [
     "Ты невероятен 🤍",
     "Жизнь становится лучше с тобой 🌸",
@@ -30,6 +30,7 @@ auto_messages = [
     "Ты приносишь свет в этот мир ☀️"
 ]
 
+# Сообщения для кнопки мотивации (оставляем как есть)
 button_messages = [
     "Ты лучший, даже если не веришь в это 💫",
     "Никогда не сомневайся в себе — ты сияешь! ✨",
@@ -37,23 +38,36 @@ button_messages = [
     "Хорошего тебе дня, герой 🤍"
 ]
 
-# Кнопка
+# Считаем мимими-фразы из файла messages.txt
+with open("messages.txt", encoding="utf-8") as f:
+    mimi_phrases = [line.strip() for line in f if line.strip()]
+
+# Клавиатура с двумя кнопками: мотивация и мимими
 keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Получить тёплое послание 💌", callback_data="motivate")]
+        [InlineKeyboardButton(text="Получить тёплое послание 💌", callback_data="motivate")],
+        [InlineKeyboardButton(text="хочу мимими 🥺", callback_data="mimimi")]
     ]
 )
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     chat_ids.add(message.chat.id)
-    await message.answer("Привет! Я тут, чтобы напоминать тебе, какой ты классный 🫶", reply_markup=keyboard)
+    await message.answer("Привет! Я тут, чтобы напоминать тебе, какой ты классный 🫶\n\nНажми кнопку ниже, чтобы получить мотивацию или мимими!", reply_markup=keyboard)
 
 @dp.callback_query()
 async def button_handler(callback: types.CallbackQuery):
-    msg = random.choice(button_messages)
-    await callback.message.answer(msg)
-    await callback.answer()
+    if callback.data == "motivate":
+        msg = random.choice(button_messages)
+        await callback.message.answer(msg)
+        await callback.answer()
+    elif callback.data == "mimimi":
+        if mimi_phrases:
+            msg = random.choice(mimi_phrases)
+            await callback.message.answer(msg)
+        else:
+            await callback.message.answer("Мимими пока нет, скоро добавим! 🥹")
+        await callback.answer()
 
 async def scheduled_message():
     for chat_id in chat_ids:
@@ -85,4 +99,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
