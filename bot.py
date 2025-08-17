@@ -8,6 +8,7 @@ from aiogram.filters import CommandStart
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aiohttp import web  # 👈 Добавили
 
 API_TOKEN = '8335218158:AAGQsXxGCc0qDOolAW1SZesJBmi0l5gE2Ng'
 
@@ -62,10 +63,26 @@ async def scheduled_message():
         except Exception as e:
             print(f"Ошибка при отправке: {e}")
 
-async def main():
+# 👇 Фейковый HTTP-сервер для Render
+async def handle(request):
+    return web.Response(text="OK")
+
+async def start():
     scheduler.add_job(scheduled_message, "interval", hours=3)
     scheduler.start()
     await dp.start_polling(bot)
 
+# 👇 Запуск Telegram-бота и веб-сервера
+async def main():
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 10000)  # Порт 10000
+    await site.start()
+
+    await start()
+
 if __name__ == '__main__':
     asyncio.run(main())
+
