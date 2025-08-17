@@ -1,17 +1,23 @@
 import asyncio
 import random
 from aiogram import Bot, Dispatcher, types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.filters import CommandStart
+from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 API_TOKEN = '8335218158:AAGQsXxGCc0qDOolAW1SZesJBmi0l5gE2Ng'
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+bot = Bot(token=API_TOKEN, parse_mode=ParseMode.HTML)
+dp = Dispatcher(storage=MemoryStorage())
+dp.message.middleware(CallbackAnswerMiddleware())
+
 scheduler = AsyncIOScheduler()
 chat_ids = set()
 
-# Милости по времени
+# Сообщения
 auto_messages = [
     "Ты невероятен 🤍",
     "Жизнь становится лучше с тобой 🌸",
@@ -19,7 +25,6 @@ auto_messages = [
     "Ты приносишь свет в этот мир ☀️"
 ]
 
-# Послания по кнопке
 button_messages = [
     "Ты лучший, даже если не веришь в это 💫",
     "Никогда не сомневайся в себе — ты сияешь! ✨",
@@ -28,34 +33,35 @@ button_messages = [
 ]
 
 # Кнопка
-keyboard = InlineKeyboardMarkup().add(
-    InlineKeyboardButton("Получить тёплое послание 💌", callback_data="motivate")
+keyboard = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Получить тёплое послание 💌", callback_data="motivate")]
+    ]
 )
 
-@dp.message_handler(commands=['start'])
+@dp.message(CommandStart())
 async def start_handler(message: types.Message):
     chat_ids.add(message.chat.id)
     await message.answer("Привет! Я тут, чтобы напоминать тебе, какой ты классный 🫶", reply_markup=keyboard)
 
-@dp.callback_query_handler(lambda c: c.data == "motivate")
-async def button_handler(callback_query: types.CallbackQuery):
+@dp.callback_query()
+async def button_handler(callback: types.CallbackQuery):
     msg = random.choice(button_messages)
-    await bot.answer_callback_query(callback_query.id)
-    await bot.send_message(callback_query.from_user.id, msg)
+    await callback.message.answer(msg)
+    await callback.answer()
 
-# Авторассылка
 async def scheduled_message():
     for chat_id in chat_ids:
-        msg = random.choice(auto_messages)
         try:
+            msg = random.choice(auto_messages)
             await bot.send_message(chat_id, msg)
         except Exception as e:
-            print(f"Ошибка для chat_id {chat_id}: {e}")
+            print(f"Ошибка при отправке: {e}")
 
 async def main():
     scheduler.add_job(scheduled_message, "interval", hours=3)
     scheduler.start()
-    await dp.start_polling()
+    await dp.start_polling(bot)
 
 if __name__ == '__main__':
     asyncio.run(main())
